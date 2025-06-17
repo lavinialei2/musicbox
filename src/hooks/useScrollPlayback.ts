@@ -1,65 +1,40 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as Tone from "tone";
 import { useSavedStrip } from "../context/SavedStripContext";
-import { PITCHES } from "../utils/constants";
+import { PITCHES, CELL_WIDTH } from "../utils/constants";
 
 export const useScrollPlayback = (containerRef: React.RefObject<HTMLDivElement | null>) => {
     const { isPunched } = useSavedStrip();
+    const lastTriggeredTimeRef = useRef<number | null>(null);
 
     useEffect(() => {
-        const synth = new Tone.Synth().toDestination();
-        const tickDuration = Tone.Time("8n").toSeconds();
+        const synth = new Tone.PolySynth(Tone.Synth).toDestination();
 
-        const scheduledEvents: number[] = [];
-
-        // Clear all existing events
-        const clearScheduled = () => {
-            scheduledEvents.forEach(id => Tone.Transport.clear(id));
-            scheduledEvents.length = 0;
-        };
-
-        // Schedule events based on punched grid
-        const scheduleGrid = () => {
-            clearScheduled();
-
-            for (let pitch = 0; pitch < isPunched.length; pitch++) {
-                for (let time = 0; time < isPunched[pitch].length; time++) {
-                    if (isPunched[pitch][time]) {
-                        const noteTime = time * tickDuration;
-                        const note = PITCHES[pitch];
-
-                        const id = Tone.Transport.schedule((t) => {
-                            synth.triggerAttackRelease(note, "8n", t);
-                        }, noteTime);
-
-                        scheduledEvents.push(id);
-                    }
-                }
-            }
-        };
-
-        scheduleGrid();
-        Tone.Transport.start("+0.1");
-
-        // Sync scroll position to transport position
         const onScroll = () => {
             if (!containerRef.current) return;
 
             const scrollLeft = containerRef.current.scrollLeft;
-            const pixelsPerTick = containerRef.current.scrollWidth / isPunched[0].length;
-            const tickPosition = scrollLeft / pixelsPerTick;
-            const timePosition = tickPosition * tickDuration;
+            const playheadX = scrollLeft + containerRef.current.clientWidth / 2;
+            const currentTimeIndex = Math.floor(playheadX / CELL_WIDTH) - 1;
 
-            Tone.Transport.seconds = timePosition;
+            if (lastTriggeredTimeRef.current === currentTimeIndex) return;
+
+            for (let pitch = 0; pitch < isPunched.length; pitch++) {
+                if (isPunched[pitch][currentTimeIndex]) {
+                    synth.triggerAttackRelease(PITCHES[pitch], "8n");
+                }
+            }
+
+            lastTriggeredTimeRef.current = currentTimeIndex;
         };
 
         const container = containerRef.current;
         container?.addEventListener("scroll", onScroll);
 
         return () => {
-            clearScheduled();
             container?.removeEventListener("scroll", onScroll);
-            Tone.Transport.stop();
+            synth.dispose(); // clean up
         };
     }, [containerRef, isPunched]);
+
 };

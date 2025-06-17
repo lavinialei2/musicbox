@@ -24,8 +24,6 @@ const EditStripModal: React.FC<EditStripModalProps> = ({ onClose }) => {
   };
 
   const handleSaveAndClose = () => {
-    console.log("🎼 Saving punch grid:");
-    console.table(localGrid); // This prints the 2D grid in table format
     setIsPunched(localGrid);
     onClose();
   };

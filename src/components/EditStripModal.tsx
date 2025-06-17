@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import StaffOverlay from "./StaffOverlay";
 import { PITCHES, NUM_ROWS, NUM_COLUMNS, CELL_WIDTH, CELL_HEIGHT, TIME_LINE_EVERY, TOP_PADDING, BOTTOM_PADDING } from "../utils/constants";
+import { useSavedStrip } from "../context/SavedStripContext";
+
 
 type Note = { pitch: number; time: number };
 type Props = {
@@ -8,7 +10,10 @@ type Props = {
 };
 
 const EditStripModal: React.FC<Props> = ({ onClose }) => {
-  const [punchedNotes, setPunchedNotes] = useState<Note[]>([]);
+  const { savedNotes, setSavedNotes } = useSavedStrip();
+  const [punchedNotes, setPunchedNotes] = useState<Note[]>(() => [...savedNotes]);
+
+
 
   const toggleNote = (pitch: number, time: number) => {
     const exists = punchedNotes.some(n => n.pitch === pitch && n.time === time);
@@ -19,6 +24,11 @@ const EditStripModal: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const handleSaveAndClose = () => {
+    setSavedNotes(punchedNotes);
+    onClose();
+  };
+
   const totalHeight = NUM_ROWS * CELL_HEIGHT + TOP_PADDING + BOTTOM_PADDING;
 
   return (
@@ -26,7 +36,10 @@ const EditStripModal: React.FC<Props> = ({ onClose }) => {
       <div style={modalContentStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3>Edit Music Strip</h3>
-          <button onClick={onClose} style={{ fontSize: "16px" }}>✕</button>
+          <button onClick={onClose}>Close</button>
+          <button onClick={handleSaveAndClose} style={{ fontSize: "14px" }}>
+            Save and Close
+          </button>
         </div>
         <div style={{ marginTop: "2rem" }}>
           <div

@@ -1,69 +1,65 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import * as Tone from "tone";
 import { useSavedStrip } from "../context/SavedStripContext";
-import { PITCHES, CELL_WIDTH } from "../utils/constants";
-
-const pitchToMidi: Record<string, number> = {
-    "C4": 60, "D4": 62, "E4": 64, "F4": 65, "G4": 67,
-    "A4": 69, "B4": 71, "C5": 72, "D5": 74, "E5": 76,
-    "F5": 77, "G5": 79, "A5": 81, "B5": 83, "C6": 84
-};
+import { PITCHES } from "../utils/constants";
 
 export const useScrollPlayback = (containerRef: React.RefObject<HTMLDivElement | null>) => {
     const { isPunched } = useSavedStrip();
-    const triggered = useRef<Set<string>>(new Set());
-    const synth = useRef<Tone.Synth | null>(null);
 
     useEffect(() => {
-        synth.current = new Tone.Synth().toDestination();
-        console.log("Synth initialized");
-    }, []);
+        const synth = new Tone.Synth().toDestination();
+        const tickDuration = Tone.Time("8n").toSeconds();
 
-    useEffect(() => {
-        const handleScroll = () => {
-            if (!containerRef.current || !synth.current) {
-                console.warn("No container or synth available");
-                return;
-            }
+        const scheduledEvents: number[] = [];
 
-            const scrollX = containerRef.current.scrollLeft;
-            const playheadX = containerRef.current.clientWidth / 2;
-            const absolutePlayheadX = scrollX + playheadX;
-            const currentTimeIndex = Math.floor(absolutePlayheadX / CELL_WIDTH);
+        // Clear all existing events
+        const clearScheduled = () => {
+            scheduledEvents.forEach(id => Tone.Transport.clear(id));
+            scheduledEvents.length = 0;
+        };
 
-            console.log("== Scroll Event ==");
-            console.log("ScrollX:", scrollX, "PlayheadX:", playheadX);
-            console.log("AbsolutePlayheadX:", absolutePlayheadX, "CurrentTimeIndex:", currentTimeIndex);
+        // Schedule events based on punched grid
+        const scheduleGrid = () => {
+            clearScheduled();
 
-            isPunched.forEach((row, pitchIndex) => {
-                const pitchName = PITCHES[pitchIndex];
-                const valueAtTime = row?.[currentTimeIndex];
+            for (let pitch = 0; pitch < isPunched.length; pitch++) {
+                for (let time = 0; time < isPunched[pitch].length; time++) {
+                    if (isPunched[pitch][time]) {
+                        const noteTime = time * tickDuration;
+                        const note = PITCHES[pitch];
 
-                console.log(`Checking pitch ${pitchName} (index ${pitchIndex}), time ${currentTimeIndex}:`, valueAtTime);
+                        const id = Tone.Transport.schedule((t) => {
+                            synth.triggerAttackRelease(note, "8n", t);
+                        }, noteTime);
 
-                if (valueAtTime) {
-                    const id = `${pitchIndex}-${currentTimeIndex}`;
-                    if (!triggered.current.has(id)) {
-                        const midi = pitchToMidi[pitchName] ?? 60;
-                        console.log(`🎵 Triggering note: ${pitchName} (MIDI ${midi}) at time ${currentTimeIndex}`);
-                        if (synth.current) synth.current.triggerAttackRelease(midi, "8n");
-                        triggered.current.add(id);
+                        scheduledEvents.push(id);
                     }
                 }
-            });
-        };
-
-        const div = containerRef.current;
-        if (div) {
-            console.log("Adding scroll listener");
-            div.addEventListener("scroll", handleScroll);
-        }
-        return () => {
-            if (div) {
-                console.log("Removing scroll listener");
-                div.removeEventListener("scroll", handleScroll);
             }
         };
-    }, [isPunched, containerRef]);
 
+        scheduleGrid();
+        Tone.Transport.start("+0.1");
+
+        // Sync scroll position to transport position
+        const onScroll = () => {
+            if (!containerRef.current) return;
+
+            const scrollLeft = containerRef.current.scrollLeft;
+            const pixelsPerTick = containerRef.current.scrollWidth / isPunched[0].length;
+            const tickPosition = scrollLeft / pixelsPerTick;
+            const timePosition = tickPosition * tickDuration;
+
+            Tone.Transport.seconds = timePosition;
+        };
+
+        const container = containerRef.current;
+        container?.addEventListener("scroll", onScroll);
+
+        return () => {
+            clearScheduled();
+            container?.removeEventListener("scroll", onScroll);
+            Tone.Transport.stop();
+        };
+    }, [containerRef, isPunched]);
 };

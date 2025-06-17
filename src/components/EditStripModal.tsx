@@ -24,9 +24,12 @@ const EditStripModal: React.FC<EditStripModalProps> = ({ onClose }) => {
   };
 
   const handleSaveAndClose = () => {
+    console.log("🎼 Saving punch grid:");
+    console.table(localGrid); // This prints the 2D grid in table format
     setIsPunched(localGrid);
     onClose();
   };
+
 
   const totalHeight = NUM_ROWS * CELL_HEIGHT + TOP_PADDING + BOTTOM_PADDING;
 
@@ -126,8 +129,8 @@ const EditStripModal: React.FC<EditStripModalProps> = ({ onClose }) => {
               zIndex: 3
             }}>
               {Array.from({ length: NUM_ROWS * NUM_COLUMNS }).map((_, i) => {
-                const pitch = i % NUM_ROWS;
-                const time = Math.floor(i / NUM_ROWS);
+                const time = i % NUM_COLUMNS;
+                const pitch = Math.floor(i / NUM_COLUMNS);
                 const punched = localGrid[pitch]?.[time] ?? false;
 
                 return (

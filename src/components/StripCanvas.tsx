@@ -78,8 +78,8 @@ const StripCanvas: React.FC = () => {
           gridTemplateRows: `repeat(${NUM_ROWS}, ${CELL_HEIGHT}px)`
         }}>
           {Array.from({ length: NUM_ROWS * NUM_COLUMNS }).map((_, i) => {
-            const pitch = i % NUM_ROWS;
-            const time = Math.floor(i / NUM_ROWS);
+            const time = i % NUM_COLUMNS;
+            const pitch = Math.floor(i / NUM_COLUMNS);
             const punched = isPunched[pitch]?.[time];
 
             return (

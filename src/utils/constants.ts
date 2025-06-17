@@ -1,1 +1,14 @@
-export {};
+const PITCHES = [
+  "C6", "B5", "A5", "G5", "F5", "E5", "D5", "C5",
+  "B4", "A4", "G4", "F4", "E4", "D4", "C4"
+];
+
+const NUM_ROWS = PITCHES.length;
+const NUM_COLUMNS = 64;
+const CELL_WIDTH = 22;
+const CELL_HEIGHT = 24;
+const TIME_LINE_EVERY = 4;
+const TOP_PADDING = 20;
+const BOTTOM_PADDING = 20;
+
+export {PITCHES, NUM_ROWS, NUM_COLUMNS, CELL_WIDTH, CELL_HEIGHT, TIME_LINE_EVERY, TOP_PADDING, BOTTOM_PADDING};

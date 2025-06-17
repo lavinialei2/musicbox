@@ -1,14 +1,16 @@
 import { useEffect, useRef } from "react";
 import * as Tone from "tone";
 import { useSavedStrip } from "../context/SavedStripContext";
-import {
-    PITCHES,
-    CELL_WIDTH,
-} from "../utils/constants";
+import { PITCHES, CELL_WIDTH } from "../utils/constants";
 
-function midiFromPitchIndex(index: number) {
-    // C4 is MIDI 60
-    return 60 + (PITCHES.length - 1 - index);
+// Converts pitch index to MIDI note using pitch names
+function midiFromPitchIndex(index: number): number {
+    const pitchToMidi: Record<string, number> = {
+        "C4": 60, "D4": 62, "E4": 64, "F4": 65, "G4": 67,
+        "A4": 69, "B4": 71, "C5": 72, "D5": 74, "E5": 76,
+        "F5": 77, "G5": 79, "A5": 81, "B5": 83, "C6": 84
+    };
+    return pitchToMidi[PITCHES[index]] ?? 60;
 }
 
 export const useScrollPlayback = (containerRef: React.RefObject<HTMLDivElement | null>) => {
@@ -29,23 +31,28 @@ export const useScrollPlayback = (containerRef: React.RefObject<HTMLDivElement |
             const absolutePlayheadX = scrollX + playheadX;
             const currentTimeIndex = Math.floor(absolutePlayheadX / CELL_WIDTH);
 
-            savedNotes.forEach(({ pitch, time }) => {
-                const id = `${pitch}-${time}`;
-                if (time === currentTimeIndex && !triggered.current.has(id)) {
+            console.log(`ScrollX: ${scrollX}, PlayheadX: ${playheadX}, Current Time Index: ${currentTimeIndex}`);
+            console.log("Saved Notes:", savedNotes);
+
+            for (let pitch = 0; pitch < PITCHES.length; pitch++) {
+                const id = `${pitch}-${currentTimeIndex}`;
+                const isPunched = savedNotes.some(n => n.pitch === pitch && n.time === currentTimeIndex);
+
+                if (isPunched) {
+                    console.log(`Note found at pitch ${pitch} (${PITCHES[pitch]}), time ${currentTimeIndex}`);
+                }
+
+                if (isPunched && !triggered.current.has(id)) {
                     const midi = midiFromPitchIndex(pitch);
-                    if (synth.current) {
-                        synth.current.triggerAttackRelease(midi, "8n");
-                    }
+                    console.log(`Playing MIDI note: ${midi}`);
+                    synth.current.triggerAttackRelease(midi, "8n");
                     triggered.current.add(id);
                 }
-            });
+            }
         };
 
         const div = containerRef.current;
-        if (div) div.addEventListener("scroll", handleScroll);
-
-        return () => {
-            if (div) div.removeEventListener("scroll", handleScroll);
-        };
+        div?.addEventListener("scroll", handleScroll);
+        return () => div?.removeEventListener("scroll", handleScroll);
     }, [containerRef, savedNotes]);
 };

@@ -1,30 +1,24 @@
-import React, { useEffect, useState } from "react";
-import StaffOverlay from "./StaffOverlay";
+import React from "react";
 import { useSavedStrip } from "../context/SavedStripContext";
 import {
-  PITCHES, NUM_COLUMNS, CELL_WIDTH, CELL_HEIGHT,
+  PITCHES, NUM_ROWS, NUM_COLUMNS,
+  CELL_WIDTH, CELL_HEIGHT,
   TIME_LINE_EVERY, TOP_PADDING, BOTTOM_PADDING
 } from "../utils/constants";
-
-const NUM_ROWS = PITCHES.length;
-const totalHeight = NUM_ROWS * CELL_HEIGHT + TOP_PADDING + BOTTOM_PADDING;
-
-type Note = { pitch: number; time: number };
+import StaffOverlay from "./StaffOverlay";
 
 const StripCanvas: React.FC = () => {
-  const { savedNotes } = useSavedStrip();
-  const [punchedNotes, setPunchedNotes] = useState<Note[]>([]);
+  const { isPunched } = useSavedStrip();
 
-  useEffect(() => {
-    setPunchedNotes(savedNotes);
-  }, [savedNotes]);
+  const totalHeight = NUM_ROWS * CELL_HEIGHT + TOP_PADDING + BOTTOM_PADDING;
+  const totalWidth = NUM_COLUMNS * CELL_WIDTH;
 
   return (
     <div style={{ display: "flex", position: "relative" }}>
-      {/* Pitch Labels */}
+      {/* Pitch labels */}
       <div style={{ display: "flex", flexDirection: "column", marginRight: "8px" }}>
         <div style={{ height: TOP_PADDING }} />
-        {PITCHES.map(label => (
+        {PITCHES.map((label) => (
           <div key={label} style={{
             height: `${CELL_HEIGHT}px`,
             display: "flex",
@@ -40,26 +34,23 @@ const StripCanvas: React.FC = () => {
         <div style={{ height: BOTTOM_PADDING }} />
       </div>
 
-      {/* Strip Grid and Notes */}
+      {/* Grid and notes */}
       <div style={{
         position: "relative",
-        width: `${NUM_COLUMNS * CELL_WIDTH}px`,
+        width: `${totalWidth}px`,
         height: `${totalHeight}px`,
         backgroundColor: "#fdfaf3"
       }}>
-        {/* SVG Grid */}
-        <svg width={NUM_COLUMNS * CELL_WIDTH} height={totalHeight} style={{
+        {/* Grid lines */}
+        <svg width={totalWidth} height={totalHeight} style={{
           position: "absolute", top: 0, left: 0, zIndex: 0, pointerEvents: "none"
         }}>
-          {/* Horizontal pitch lines */}
           {Array.from({ length: NUM_ROWS }).map((_, row) => {
             const y = TOP_PADDING + row * CELL_HEIGHT + CELL_HEIGHT / 2;
             return (
-              <line key={`h-${row}`} x1={0} x2={NUM_COLUMNS * CELL_WIDTH} y1={y} y2={y} stroke="#ddd" strokeWidth={1} />
+              <line key={`h-${row}`} x1={0} x2={totalWidth} y1={y} y2={y} stroke="#ddd" strokeWidth={1} />
             );
           })}
-
-          {/* Vertical time lines */}
           {Array.from({ length: Math.floor(NUM_COLUMNS / TIME_LINE_EVERY) }).map((_, i) => {
             const x = (i + 1) * TIME_LINE_EVERY * CELL_WIDTH;
             return (
@@ -68,37 +59,36 @@ const StripCanvas: React.FC = () => {
           })}
         </svg>
 
-        {/* Staff Lines */}
+        {/* Staff lines */}
         <StaffOverlay
-          width={NUM_COLUMNS * CELL_WIDTH}
+          width={totalWidth}
           cellHeight={CELL_HEIGHT}
           pitches={PITCHES}
           offsetY={TOP_PADDING}
         />
 
-        {/* Punched Holes */}
+        {/* Punched holes */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${NUM_COLUMNS}, ${CELL_WIDTH}px)`,
-          gridTemplateRows: `repeat(${NUM_ROWS}, ${CELL_HEIGHT}px)`,
           position: "absolute",
           top: TOP_PADDING,
           left: 0,
-          zIndex: 3
+          zIndex: 3,
+          display: "grid",
+          gridTemplateColumns: `repeat(${NUM_COLUMNS}, ${CELL_WIDTH}px)`,
+          gridTemplateRows: `repeat(${NUM_ROWS}, ${CELL_HEIGHT}px)`
         }}>
           {Array.from({ length: NUM_ROWS * NUM_COLUMNS }).map((_, i) => {
-            const row = i % NUM_ROWS;
-            const col = Math.floor(i / NUM_ROWS);
-            const isPunched = punchedNotes.some(n => n.pitch === row && n.time === col);
+            const pitch = i % NUM_ROWS;
+            const time = Math.floor(i / NUM_ROWS);
+            const punched = isPunched[pitch]?.[time];
 
             return (
-              <div key={`${row}-${col}`} style={{
+              <div key={`${pitch}-${time}`} style={{
                 width: `${CELL_WIDTH}px`,
                 height: `${CELL_HEIGHT}px`,
-                position: "relative",
-                backgroundColor: "transparent"
+                position: "relative"
               }}>
-                {isPunched && (
+                {punched && (
                   <div style={{
                     position: "absolute",
                     top: "50%",

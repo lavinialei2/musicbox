@@ -2,34 +2,29 @@ import React, { useEffect, useState } from "react";
 import StaffOverlay from "./StaffOverlay";
 import { useSavedStrip } from "../context/SavedStripContext";
 import {
-  PITCHES, NUM_COLUMNS, CELL_WIDTH, CELL_HEIGHT,
+  PITCHES, NUM_ROWS, NUM_COLUMNS, CELL_WIDTH, CELL_HEIGHT,
   TIME_LINE_EVERY, TOP_PADDING, BOTTOM_PADDING
 } from "../utils/constants";
 
-const NUM_ROWS = PITCHES.length;
-
-type Note = { pitch: number; time: number };
 type EditStripModalProps = { onClose: () => void };
 
 const EditStripModal: React.FC<EditStripModalProps> = ({ onClose }) => {
-  const { savedNotes, setSavedNotes } = useSavedStrip();
-  const [punchedNotes, setPunchedNotes] = useState<Note[]>([]);
+  const { isPunched, setIsPunched } = useSavedStrip();
+  const [localGrid, setLocalGrid] = useState<boolean[][]>([]);
 
   useEffect(() => {
-    setPunchedNotes(savedNotes);
-  }, [savedNotes]);
+    // Deep copy grid
+    setLocalGrid(isPunched.map(row => [...row]));
+  }, [isPunched]);
 
   const toggleNote = (pitch: number, time: number) => {
-    const exists = punchedNotes.some(n => n.pitch === pitch && n.time === time);
-    if (exists) {
-      setPunchedNotes(punchedNotes.filter(n => !(n.pitch === pitch && n.time === time)));
-    } else {
-      setPunchedNotes([...punchedNotes, { pitch, time }]);
-    }
+    const newGrid = localGrid.map(row => [...row]);
+    newGrid[pitch][time] = !newGrid[pitch][time];
+    setLocalGrid(newGrid);
   };
 
   const handleSaveAndClose = () => {
-    setSavedNotes(punchedNotes);
+    setIsPunched(localGrid);
     onClose();
   };
 
@@ -131,19 +126,19 @@ const EditStripModal: React.FC<EditStripModalProps> = ({ onClose }) => {
               zIndex: 3
             }}>
               {Array.from({ length: NUM_ROWS * NUM_COLUMNS }).map((_, i) => {
-                const row = i % NUM_ROWS;
-                const col = Math.floor(i / NUM_ROWS);
-                const isPunched = punchedNotes.some(n => n.pitch === row && n.time === col);
+                const pitch = i % NUM_ROWS;
+                const time = Math.floor(i / NUM_ROWS);
+                const punched = localGrid[pitch]?.[time] ?? false;
 
                 return (
-                  <div key={`${row}-${col}`} onClick={() => toggleNote(row, col)} style={{
+                  <div key={`${pitch}-${time}`} onClick={() => toggleNote(pitch, time)} style={{
                     width: `${CELL_WIDTH}px`,
                     height: `${CELL_HEIGHT}px`,
                     position: "relative",
                     cursor: "pointer",
                     backgroundColor: "transparent"
                   }}>
-                    {isPunched && (
+                    {punched && (
                       <div style={{
                         position: "absolute",
                         top: "50%",

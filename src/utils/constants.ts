@@ -4,8 +4,8 @@ const PITCHES = [
 ];
 
 const NUM_ROWS = PITCHES.length;
-const NUM_COLUMNS = 48;
-const CELL_WIDTH = 30;
+const NUM_COLUMNS = 64;
+const CELL_WIDTH = 22;
 const CELL_HEIGHT = 24;
 const TIME_LINE_EVERY = 4;
 const TOP_PADDING = 20;

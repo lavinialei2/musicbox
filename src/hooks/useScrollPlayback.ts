@@ -1,49 +1,42 @@
 import { useEffect, useRef } from "react";
 import * as Tone from "tone";
 import { useSavedStrip } from "../context/SavedStripContext";
-
-const PITCHES = [
-    "C6", "B5", "A5", "G5", "F5", "E5", "D5", "C5",
-    "B4", "A4", "G4", "F4", "E4", "D4", "C4"
-];
-
-const CELL_WIDTH = 30;
-const SCROLL_THRESHOLD = 5; // px to trigger updates
+import {
+    PITCHES,
+    CELL_WIDTH,
+} from "../utils/constants";
 
 function midiFromPitchIndex(index: number) {
     // C4 is MIDI 60
     return 60 + (PITCHES.length - 1 - index);
 }
 
-export const useScrollPlayback = (
-    containerRef: React.RefObject<HTMLDivElement | null>
-) => {
+export const useScrollPlayback = (containerRef: React.RefObject<HTMLDivElement | null>) => {
     const { savedNotes } = useSavedStrip();
-    const lastScrollX = useRef(0);
     const triggered = useRef<Set<string>>(new Set());
+    const synth = useRef<Tone.Synth | null>(null);
 
     useEffect(() => {
-        const synth = new Tone.Synth().toDestination();
+        synth.current = new Tone.Synth().toDestination();
+    }, []);
 
+    useEffect(() => {
         const handleScroll = () => {
-            if (!containerRef.current) return;
+            if (!containerRef.current || !synth.current) return;
+
             const scrollX = containerRef.current.scrollLeft;
-            const visibleStart = Math.floor(scrollX / CELL_WIDTH);
-            const visibleEnd = Math.floor((scrollX + containerRef.current.clientWidth) / CELL_WIDTH);
+            const playheadX = containerRef.current.clientWidth / 2;
+            const absolutePlayheadX = scrollX + playheadX;
+            const currentTimeIndex = Math.floor(absolutePlayheadX / CELL_WIDTH);
 
-            // Only process when scroll position changes enough
-            if (Math.abs(scrollX - lastScrollX.current) < SCROLL_THRESHOLD) return;
-            lastScrollX.current = scrollX;
-
-            // Trigger any notes in range that haven't been played yet
             savedNotes.forEach(({ pitch, time }) => {
-                if (time >= visibleStart && time <= visibleEnd) {
-                    const id = `${pitch}-${time}`;
-                    if (!triggered.current.has(id)) {
-                        const midi = midiFromPitchIndex(pitch);
-                        synth.triggerAttackRelease(midi, "8n");
-                        triggered.current.add(id);
+                const id = `${pitch}-${time}`;
+                if (time === currentTimeIndex && !triggered.current.has(id)) {
+                    const midi = midiFromPitchIndex(pitch);
+                    if (synth.current) {
+                        synth.current.triggerAttackRelease(midi, "8n");
                     }
+                    triggered.current.add(id);
                 }
             });
         };

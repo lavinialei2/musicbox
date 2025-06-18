@@ -7,8 +7,11 @@ import {
   CELL_WIDTH, NUM_COLUMNS
 } from "../utils/constants";
 
-const MusicBoxView: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+type Props = {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+};
+
+const MusicBoxView: React.FC<Props> = ({ containerRef }) => {
   const stripHeight = NUM_ROWS * CELL_HEIGHT + TOP_PADDING + BOTTOM_PADDING;
 
   // Hook handles playback

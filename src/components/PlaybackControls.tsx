@@ -1,10 +1,34 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
-const PlaybackControls: React.FC = () => {
+type Props = {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+};
+
+const PlaybackControls: React.FC<Props> = ({ containerRef }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    if (!isPlaying || !containerRef.current) return;
+
+    const speed = 0.6; // pixels per frame
+    let animationFrame: number;
+
+    const animate = () => {
+      if (!containerRef.current) return;
+      containerRef.current.scrollLeft += speed;
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isPlaying, containerRef]);
+
   return (
-    <button onClick={() => alert("Play/Pause toggled!")}>
-      ▶️ Play / Pause
-    </button>
+    <div style={{ marginTop: "1rem" }}>
+      <button onClick={() => setIsPlaying(prev => !prev)}>
+        {isPlaying ? "Stop" : "Play"}
+      </button>
+    </div>
   );
 };
 

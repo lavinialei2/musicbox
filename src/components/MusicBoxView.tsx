@@ -1,24 +1,60 @@
-import React, { useRef } from "react";
-import StripCanvas from "./StripCanvas";
+import React, { useEffect, useRef } from "react";
+import InfiniteStripCanvas from "./InfiniteStripCanvas";
+import "../styles/global.css";
 import { useScrollPlayback } from "../hooks/useScrollPlayback";
 import {
-  CELL_HEIGHT,
-  NUM_ROWS,
-  TOP_PADDING,
-  BOTTOM_PADDING,
+  CELL_HEIGHT, NUM_ROWS, TOP_PADDING, BOTTOM_PADDING,
+  CELL_WIDTH, NUM_COLUMNS
 } from "../utils/constants";
 
-const MusicBoxView: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useScrollPlayback(containerRef);
+type Props = {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+};
 
+const MusicBoxView: React.FC<Props> = ({ containerRef }) => {
   const stripHeight = NUM_ROWS * CELL_HEIGHT + TOP_PADDING + BOTTOM_PADDING;
+
+  // Hook handles playback
+  const suppressNextTick = useRef(false);
+  useScrollPlayback(containerRef, suppressNextTick);
+
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const stripWidth = NUM_COLUMNS * CELL_WIDTH;
+    const initialScrollLeft = stripWidth - container.clientWidth / 2 - 2;
+
+    // Align beginning of middle copy with playhead
+    container.scrollLeft = initialScrollLeft;
+
+    const handleScrollLoop = () => {
+      if (container.scrollLeft <= stripWidth * 0.2) {
+        container.scrollLeft += stripWidth;
+        suppressNextTick.current = true;
+      } else if (container.scrollLeft >= stripWidth * 1.8) {
+        container.scrollLeft -= stripWidth;
+      }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const scrollSpeedFactor = 0.25;
+      const delta = e.deltaX < 0 ? 0 : e.deltaX;
+      container.scrollLeft += delta * scrollSpeedFactor;
+      handleScrollLoop();
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
 
   return (
     <div style={{ position: "relative", width: "600px", height: `${stripHeight}px` }}>
-      {/* Scrollable strip container */}
       <div
         ref={containerRef}
+        className="scroll-container"
         style={{
           width: "100%",
           height: "100%",
@@ -26,12 +62,14 @@ const MusicBoxView: React.FC = () => {
           overflowY: "hidden",
           backgroundColor: "#fffdf6",
           border: "2px solid black",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
       >
-        <StripCanvas />
+        <InfiniteStripCanvas />
       </div>
 
-      {/* Fixed vertical red playhead line */}
+      {/* Fixed red playhead line */}
       <div
         style={{
           position: "absolute",
